@@ -1,0 +1,75 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: image-ingestion-management-shred
+  datasource:
+    url: ${DATASOURCE_URL:jdbc:postgresql://localhost:5432/image_ingestion_db}
+    username: ${DATASOURCE_USERNAME:postgres}
+    password: ${DATASOURCE_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: ${HIKARI_MAXIMUM_POOL_SIZE:10}
+      connection-timeout: ${HIKARI_CONNECTION_TIMEOUT_MS:30000}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_HIBERNATE_DDL_AUTO:validate}
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:20MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:21MB}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SECURITY_JWT_ISSUER_URI:http://localhost:8081/realms/default}
+          jwk-set-uri: ${SECURITY_JWK_SET_URI:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS:health,info,metrics,loggers,env,threaddump,heapdump}
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+storage:
+  profile: ${STORAGE_PROFILE:minio} # s3|minio
+  s3:
+    bucket-name: ${S3_BUCKET_NAME:image-storage}
+    region: ${S3_REGION:us-east-1}
+    endpoint-override: ${S3_ENDPOINT_OVERRIDE:}
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket-name: ${S3_BUCKET_NAME:image-storage}
+
+cleanup:
+  cron: ${CLEANUP_CRON:0 0 * * * *}
+
+springdoc:
+  api-docs:
+    path: ${SPRINGDOC_API_DOCS_PATH:/v3/api-docs}
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.hibernate.SQL: ${LOGGING_LEVEL_SQL:warn}
+    ai.shreds.infrastructure.repositories: ${LOGGING_LEVEL_REPOSITORIES:info}
+    ai.shreds.infrastructure.external_services.storage: ${LOGGING_LEVEL_S3:info}
+    ai.shreds.infrastructure.logging: ${LOGGING_LEVEL_AUDIT:info}
+
+images:
+  circuit-breaker-name: ${CIRCUIT_BREAKER_NAME:storageCB}
+  pagination:
+    default-size: ${PAGINATION_DEFAULT_SIZE:20}
+    max-size: ${PAGINATION_MAX_SIZE:100}
