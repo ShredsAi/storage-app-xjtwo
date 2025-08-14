@@ -1,0 +1,419 @@
+openapi: 3.0.3
+info:
+  title: Image Ingestion and Management Shred API
+  version: 0.0.1
+  description: REST API for uploading, managing, and querying item images.
+servers:
+  - url: http://localhost:8080
+    description: Local server
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/items/{itemId}/images:
+    post:
+      summary: Upload and ingest a new image
+      operationId: uploadImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: itemId
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                payload:
+                  $ref: '#/components/schemas/SharedDTOImageUploadPayload'
+              required:
+                - file
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOImageDetails'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      summary: List images for an item
+      operationId: listImages
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: itemId
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, INACTIVE, ALL]
+          required: false
+        - in: query
+          name: role
+          schema:
+            $ref: '#/components/schemas/SharedEnumImageRole'
+          required: false
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, minimum: 1, default: 20 }
+        - in: query
+          name: sort
+          schema: { type: string, default: createdAt,desc }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOPaginatedImages'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/images/{imageId}:
+    get:
+      summary: Get image details by ID
+      operationId: getImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOImageDetails'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/images/{imageId}/activate:
+    post:
+      summary: Activate an image
+      operationId: activateImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOImageStatusResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/images/{imageId}/deactivate:
+    post:
+      summary: Deactivate an image
+      operationId: deactivateImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOImageStatusResponse'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/images/{imageId}/tasks/reprocess:
+    post:
+      summary: Enqueue reprocessing tasks
+      operationId: reprocessVariants
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharedDTOReprocessRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOReprocessResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/images/{imageId}:
+    patch:
+      summary: Update image metadata
+      operationId: updateImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: imageId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SharedDTOImageUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedDTOImageDetails'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+    InternalError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SharedDTOErrorResponse'
+  schemas:
+    SharedEnumImageRole:
+      type: string
+      enum: [PRIMARY, GALLERY, THUMBNAIL_ONLY]
+    SharedEnumImageStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE, DELETED]
+    SharedEnumImageFormat:
+      type: string
+      enum: [JPEG, PNG, WEBP, AVIF]
+    SharedEnumVariantType:
+      type: string
+      enum: [ORIGINAL, THUMBNAIL, SMALL, MEDIUM, LARGE]
+    SharedEnumProcessingStatus:
+      type: string
+      enum: [PENDING, RUNNING, COMPLETED, FAILED]
+    SharedDTOImageUploadPayload:
+      type: object
+      properties:
+        title: { type: string, maxLength: 256 }
+        altText: { type: string, maxLength: 512 }
+        role: { $ref: '#/components/schemas/SharedEnumImageRole' }
+        checksumAlgorithm:
+          type: string
+          enum: [MD5, SHA_1, SHA_256, SHA_512]
+        idempotencyKey: { type: string, maxLength: 64 }
+    SharedDTOImageUpdateRequest:
+      type: object
+      properties:
+        title: { type: string, maxLength: 256 }
+        altText: { type: string, maxLength: 512 }
+        role: { $ref: '#/components/schemas/SharedEnumImageRole' }
+    SharedDTOReprocessRequest:
+      type: object
+      properties:
+        requestedVariants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnumVariantType'
+    SharedValueDimensions:
+      type: object
+      properties:
+        width: { type: integer, format: int32 }
+        height: { type: integer, format: int32 }
+    SharedValueChecksum:
+      type: object
+      properties:
+        algorithm: { type: string }
+        value: { type: string }
+    SharedValueImageMetadata:
+      type: object
+      properties:
+        format: { $ref: '#/components/schemas/SharedEnumImageFormat' }
+        dimensions: { $ref: '#/components/schemas/SharedValueDimensions' }
+        fileSizeBytes: { type: integer, format: int64 }
+        checksum: { $ref: '#/components/schemas/SharedValueChecksum' }
+    SharedDTOImageVariant:
+      type: object
+      properties:
+        type: { $ref: '#/components/schemas/SharedEnumVariantType' }
+        format: { $ref: '#/components/schemas/SharedEnumImageFormat' }
+        dimensions: { $ref: '#/components/schemas/SharedValueDimensions' }
+        fileSizeBytes: { type: integer, format: int64 }
+        quality: { type: integer, format: int32 }
+        storageKey: { type: string }
+    SharedDTOProcessingTaskSummary:
+      type: object
+      properties:
+        taskId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/SharedEnumProcessingStatus' }
+        requestedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    SharedDTOImageDetails:
+      type: object
+      properties:
+        imageId: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        role: { $ref: '#/components/schemas/SharedEnumImageRole' }
+        title: { type: string }
+        altText: { type: string }
+        status: { $ref: '#/components/schemas/SharedEnumImageStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        metadata: { $ref: '#/components/schemas/SharedValueImageMetadata' }
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedDTOImageVariant'
+    SharedDTOImageSummary:
+      type: object
+      properties:
+        imageId: { type: string, format: uuid }
+        itemId: { type: string, format: uuid }
+        role: { $ref: '#/components/schemas/SharedEnumImageRole' }
+        title: { type: string }
+        altText: { type: string }
+        status: { $ref: '#/components/schemas/SharedEnumImageStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedDTOImageVariant'
+    SharedDTOPaginatedImages:
+      type: object
+      properties:
+        page: { type: integer, format: int32 }
+        size: { type: integer, format: int32 }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int32 }
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedDTOImageSummary'
+    SharedDTOReprocessResponse:
+      type: object
+      properties:
+        imageId: { type: string, format: uuid }
+        requestedVariants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedEnumVariantType'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedDTOProcessingTaskSummary'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/SharedDTOImageVariant'
+    SharedDTOImageStatusResponse:
+      type: object
+      properties:
+        imageId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/SharedEnumImageStatus' }
+        updatedAt: { type: string, format: date-time }
+    SharedDTOErrorResponse:
+      type: object
+      properties:
+        errorCode: { type: string }
+        message: { type: string }

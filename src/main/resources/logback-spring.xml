@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+    <property name="LOG_LEVEL_ROOT" value="${LOGBACK_LEVEL_ROOT:-INFO}"/>
+    <property name="APP_NAME" value="image-ingestion-management-shred"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="${LOG_LEVEL_ROOT}">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <logger name="org.hibernate.SQL" level="${LOGGING_LEVEL_SQL:-WARN}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="ai.shreds.infrastructure.repositories" level="${LOGGING_LEVEL_REPOSITORIES:-INFO}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+    <logger name="ai.shreds.infrastructure.external_services.storage" level="${LOGGING_LEVEL_S3:-INFO}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="ai.shreds.infrastructure.logging" level="${LOGGING_LEVEL_AUDIT:-INFO}" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+</configuration>
